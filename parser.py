@@ -1,35 +1,68 @@
 """
-Parser — Novel Point 2: Temporal Intelligence
-Uses GenAI (not regex) to extract timing constraints, event chains,
-and ISO standard alignment from natural language requirements.
-Aligned with paper's VSS/CAN signal extraction concept at requirement level.
+parser.py — Requirement Understanding (GenAI)
+
+Role:
+✔ Extract semantic structure (event, trigger, component, event_chain)
+❌ DOES NOT extract timing anymore (handled by timing_extractor)
+
+This separation improves:
+- modularity
+- novelty clarity
+- paper justification
 """
+
 from llm_client import query_llm
-from prompt_templates import get_requirement_parse_prompt
 import json
 
 
 def parse_requirement(requirement: str) -> dict:
     """
-    GenAI-powered requirement parser.
-    Extracts: event, max_delay_ms, trigger, component,
-              requirement_type, iso_standard, event_chain
+    Extract semantic structure from requirement.
     """
-    prompt = get_requirement_parse_prompt(requirement)
-    response = query_llm(prompt, temperature=0.1)  # very low temp — precision task
+
+    prompt = f"""
+You are an automotive safety analyst.
+
+Extract the STRUCTURE of this requirement (NOT timing values).
+
+Requirement:
+"{requirement}"
+
+OUTPUT STRICT JSON:
+
+{{
+  "event": "<main action>",
+  "trigger": "<what triggers the event>",
+  "component": "<system component>",
+  "event_chain": ["<step1>", "<step2>", "<step3>", "<step4>"]
+}}
+
+RULES:
+- DO NOT include timing values
+- Focus only on semantic understanding
+- Keep event_chain logical and sequential
+"""
+
+    response = query_llm(prompt, temperature=0.1)
 
     try:
-        json_start = response.find("{")
-        json_end = response.rfind("}") + 1
-        parsed = json.loads(response[json_start:json_end])
+        start = response.find("{")
+        end = response.rfind("}") + 1
+        parsed = json.loads(response[start:end])
 
-        # Validate required fields exist
-        required = ["event", "max_delay_ms", "trigger", "component", "event_chain"]
+        required = ["event", "trigger", "component", "event_chain"]
+
         for field in required:
             if field not in parsed:
                 raise ValueError(f"Missing field: {field}")
 
         return parsed
 
-    except Exception as e:
-        raise ValueError(f"Requirement parsing failed: {e}\nRaw LLM output: {response}")
+    except Exception:
+        return {
+            "event": "unknown",
+            "trigger": "unknown",
+            "component": "unknown",
+            "event_chain": [],
+            "source": "fallback"
+        }

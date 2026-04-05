@@ -8,7 +8,7 @@ def simulate(delay, max_delay):
     actual_delay = delay
 
     violation = 1 if actual_delay > max_delay else 0
-    delay_score = round(actual_delay / max_delay, 2)
+    delay_score = round(actual_delay / max_delay, 2) if max_delay > 0 else 0
 
     return {
         "actual_delay": actual_delay,
@@ -25,7 +25,7 @@ def adaptive_policy(current_delay, violation, max_delay):
     explore_prob = 0.4
 
     if violation == 1:
-        # move toward boundary
+        # move toward safe boundary
         next_delay = current_delay - random.choice([10, 20])
     else:
         if random.random() < explore_prob:
@@ -63,14 +63,15 @@ def run_simulation(input_data):
 # ==============================
 def apply_adaptive_learning(agent1_output, steps_per_scenario=3):
 
-    max_delay = agent1_output["max_delay_ms"]
-    scenarios = agent1_output["scenarios"]
+    max_delay = agent1_output.get("max_delay_ms", 100)
+    scenarios = agent1_output.get("scenarios", [])
 
     adaptive_results = []
 
     for scenario in scenarios:
 
-        delay = scenario["delay_ms"]
+        #  SAFE DELAY EXTRACTION
+        delay = scenario.get("delay_ms", scenario.get("actual_delay_ms", 0))
 
         for step in range(steps_per_scenario):
 
@@ -80,12 +81,13 @@ def apply_adaptive_learning(agent1_output, steps_per_scenario=3):
             })
 
             adaptive_results.append({
-                "scenario_type": scenario["type"],
-                "original_delay": scenario["delay_ms"],
+                "scenario_type": scenario.get("type"),
+                "original_delay": delay,
                 "iteration": step + 1,
                 **result
             })
 
+            # update delay for next step
             delay = result["next_delay"]
 
     return adaptive_results

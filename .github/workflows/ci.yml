@@ -29,14 +29,9 @@ jobs:
 
       - name: Check syntax (pyflakes)
         run: |
-          pyflakes rag_engine.py
-          pyflakes llm_client.py
-          pyflakes simulator_rl.py
-          pyflakes vehicle_simulator.py
-          pyflakes attack_injector.py
-          pyflakes prompt_templates.py
-          pyflakes reasoning_engine.py
-          pyflakes memory.py
+          pyflakes rag_engine.py llm_client.py simulator_rl.py \
+                   vehicle_simulator.py attack_injector.py \
+                   prompt_templates.py reasoning_engine.py memory.py
 
       - name: Flake8 style check (errors only)
         run: |
@@ -61,10 +56,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pytest pytest-cov python-dotenv
+          pip install -r requirements.txt
 
-      - name: Create dummy .env (no real API key needed for unit tests)
-        run: echo "GROQ_API_KEY=dummy_key_for_tests" > .env
+      - name: Inject API key from GitHub Secrets
+        run: echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" > .env
 
       - name: Create outputs directory
         run: mkdir -p outputs
@@ -95,7 +90,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install python-dotenv
+        run: pip install -r requirements.txt
 
       - name: Run simulator for 2 seconds
         run: |
@@ -110,8 +105,8 @@ jobs:
           frames = []
           while not q.empty():
               frames.append(q.get_nowait())
-          print(f'Generated {sim._s.frame_id} frames')
-          assert sim._s.frame_id > 10, 'Simulator generated too few frames'
+          print(f'Generated {len(frames)} frames')
+          assert len(frames) > 10, 'Simulator generated too few frames'
           print('Simulator smoke test PASSED')
           "
 
@@ -128,6 +123,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
       - name: Test RL agent learns
         run: |
@@ -169,25 +167,22 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install python-dotenv groq
+        run: pip install -r requirements.txt
 
-      - name: Create dummy .env
-        run: echo "GROQ_API_KEY=dummy" > .env
+      - name: Inject API key from GitHub Secrets
+        run: echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" > .env
 
       - name: Test RAG retrieval (no LLM call)
         run: |
           python -c "
           from rag_engine import retrieve, get_context_for_llm
 
-          # Test ISO retrieval
           iso = retrieve('brake timing', 'iso', top_k=2)
           print(f'ISO results: {len(iso)}')
 
-          # Test attack retrieval
           atk = retrieve('can spoofing', 'attack', top_k=2)
           print(f'Attack results: {len(atk)}')
 
-          # Test context builder
           ctx = get_context_for_llm('emergency brake')
           assert len(ctx) > 10, 'RAG context is empty'
           print(f'Context length: {len(ctx)} chars')
@@ -209,14 +204,16 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install streamlit plotly python-dotenv groq
+        run: pip install -r requirements.txt
+
+      - name: Inject API key from GitHub Secrets
+        run: echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" > .env
 
       - name: Test dashboard imports
         run: |
           python -c "
           import sys
           sys.path.insert(0, '.')
-          # Test that dashboard components import without error
           from dashboard.components.event_chain_viz import render_event_chain
           from dashboard.components.risk_monitor import render_risk_gauge
           print('Dashboard imports PASSED')
@@ -226,7 +223,7 @@ jobs:
   notify:
     name: Pipeline Complete
     runs-on: ubuntu-latest
-    needs: [test, simulator-test, rl-test, rag-test]
+    needs: [test, simulator-test, rl-test, rag-test, dashboard-test]
     if: always()
 
     steps:

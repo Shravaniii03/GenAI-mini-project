@@ -28,21 +28,27 @@ def _load_kb(filename):
 
     path = _KB_PATH / filename
     if not path.exists():
-        return []
+        return {}
 
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
 
-    _CACHE[filename] = data
-    return data
+    # Ensure we always return a dict
+    if isinstance(data, dict):
+        _CACHE[filename] = data
+    else:
+        _CACHE[filename] = {}
+    return _CACHE[filename]
 
 
 def load_vss_signals():
-    return _load_kb("vss_signals.json").get("signals", [])
+    data = _load_kb("vss_signals.json")
+    return data.get("signals", [])
 
 
 def load_can_messages():
-    return _load_kb("can_messages.json").get("messages", [])
+    data = _load_kb("can_messages.json")
+    return data.get("messages", [])
 
 
 def load_iso_rules():
@@ -51,7 +57,8 @@ def load_iso_rules():
 
 
 def load_attack_patterns():
-    return _load_kb("attack_patterns.json").get("attack_patterns", [])
+    data = _load_kb("attack_patterns.json")
+    return data.get("attack_patterns", [])
 
 
 # =========================

@@ -10,7 +10,7 @@ Policy : epsilon-greedy Q-learning with decay
 """
 
 import random
-import math
+
 import json
 from pathlib import Path
 

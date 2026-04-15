@@ -25,7 +25,7 @@ import threading
 import queue
 import logging
 from enum import Enum
-from typing import Optional
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [SIMULATOR] %(levelname)s  %(message)s")
 log = logging.getLogger("vehicle_simulator")

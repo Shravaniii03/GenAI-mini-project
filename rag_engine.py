@@ -19,7 +19,7 @@ from llm_client import query_llm
 # LOAD KB
 # =========================
 
-_KB_PATH = Path("knowledge_base")
+_KB_PATH = Path("Knowledge_base")
 _CACHE = {}
 
 def _load_kb(filename):
